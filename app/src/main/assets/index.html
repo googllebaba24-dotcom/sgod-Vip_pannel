@@ -4,51 +4,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { 
-            background: rgba(0, 0, 0, 0.85); 
+            background: rgba(15, 15, 15, 0.95); 
             color: #00ff00; 
             font-family: monospace; 
-            padding: 15px; 
+            padding: 12px; 
             margin: 0; 
             border: 2px solid #00ff00;
-            border-bottom-left-radius: 15px;
-            border-bottom-right-radius: 15px;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
         }
-        .title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; text-shadow: 0 0 5px #00ff00; }
-        .box { border: 1px dashed #00ff00; padding: 15px; text-align: center; margin-bottom: 15px; }
-        .result { font-size: 28px; font-weight: bold; color: yellow; margin-top: 10px; }
+        .title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #fff; text-shadow: 0 0 5px #00ff00; }
+        .info-box { background: #1a1a1a; border: 1px solid #333; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; }
+        .box { border: 1px dashed #00ff00; padding: 10px; text-align: center; margin-bottom: 8px; background: rgba(0,255,0,0.03); }
+        .result { font-size: 26px; font-weight: bold; color: yellow; margin-top: 5px; text-shadow: 0 0 8px yellow; }
+        .timer { font-size: 14px; color: #ff5555; font-weight: bold; }
         button { 
-            background: #00ff00; color: #000; border: none; padding: 12px; 
-            width: 100%; font-weight: bold; font-size: 16px; 
-            border-radius: 5px; margin-bottom: 10px; box-shadow: 0 0 5px #00ff00;
+            background: #00ff00; color: #000; border: none; padding: 10px; 
+            width: 100%; font-weight: bold; font-size: 14px; 
+            border-radius: 4px; margin-bottom: 6px; cursor: pointer;
+            box-shadow: 0 0 5px #00ff00;
         }
         button:active { background: #00cc00; }
-        .close-btn { background: red; color: white; border: 1px solid white; box-shadow: 0 0 5px red; }
+        .close-btn { background: #cc0000; color: white; box-shadow: 0 0 5px red; }
     </style>
 </head>
 <body>
-    <div class="title">🔥 SGOD VIP 🔥</div>
+    <div class="title">🔥 SGOD VIP PREDICTOR 🔥</div>
+    
+    <div class="info-box">
+        <span>Period: <b id="period-num" style="color: cyan;">Updating...</b></span>
+        <span>Timer: <b class="timer" id="timer">00:00</b></span>
+    </div>
+
     <div class="box">
-        <div>Server: <span style="color: yellow;">CONNECTED</span></div>
-        <div style="margin-top: 10px; font-size: 14px;">NEXT PREDICTION:</div>
-        <div class="result" id="prediction">WAITING...</div>
+        <div style="font-size: 10px; color: #aaa;">STATUS: <span style="color: #00ff00;" id="status-text">READY</span></div>
+        <div class="result" id="prediction">CLICK GET</div>
     </div>
     
     <button onclick="getPrediction()">GET PREDICTION</button>
     <button class="close-btn" onclick="Android.closePanel()">CLOSE PANEL</button>
 
     <script>
-        function getPrediction() {
-            // Yahan aap apna original prediction logic daal sakte hain
-            const results = ["BIG", "SMALL", "BIG", "SMALL"];
-            const random = results[Math.floor(Math.random() * results.length)];
+        let lastPeriod = "";
+        let lockedResult = "";
+
+        function updateSystem() {
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(now.getUTCDate()).padStart(2, '0');
             
-            document.getElementById('prediction').innerText = "CALCULATING...";
-            document.getElementById('prediction').style.color = "white";
+            const hours = now.getUTCHours();
+            const minutes = now.getUTCMinutes();
+            const seconds = now.getUTCSeconds();
             
-            setTimeout(() => {
-                document.getElementById('prediction').innerText = random;
+            // Standard time-based unique period generator format (YYYYMMDD5min/1min style)
+            const totalMins = hours * 60 + minutes;
+            const periodId = `${year}${month}${day}1000${10001 + totalMins}`;
+            
+            // Screen par poora ya last 5 digits show karein taaki live lage
+            document.getElementById("period-num").innerText = periodId.slice(-5);
+
+            // 60-second countdown timer
+            let secLeft = 59 - (seconds % 60);
+            let secStr = secLeft < 10 ? "0" + secLeft : secLeft;
+            document.getElementById("timer").innerText = "00:" + secStr;
+
+            // Agar period badal gaya, toh purana lock hata do taaki naye period ki nayi prediction aa sake
+            if (periodId !== lastPeriod) {
+                lastPeriod = periodId;
+                lockedResult = ""; // Reset lock on new period
+                document.getElementById('prediction').innerText = "WAITING...";
                 document.getElementById('prediction').style.color = "yellow";
-            }, 1000);
+                document.getElementById('status-text').innerText = "NEW PERIOD READY";
+            }
+        }
+
+        setInterval(updateSystem, 1000);
+        updateSystem();
+
+        function getPrediction() {
+            const predBox = document.getElementById('prediction');
+            
+            // Agar is period ki prediction pehle se locked hai, toh wohi dikhayega, change nahi hone dega
+            if (lockedResult !== "") {
+                predBox.innerText = lockedResult;
+                predBox.style.color = lockedResult.includes("BIG") ? "#00ff00" : "#ff3333";
+                document.getElementById('status-text').innerText = "LOCKED (STABLE)";
+                return;
+            }
+
+            predBox.innerText = "ANALYZING...";
+            predBox.style.color = "white";
+            document.getElementById('status-text').innerText = "PROCESSING...";
+
+            setTimeout(() => {
+                // Algorithm jo period ke mutabiq ekdam stable result banayega
+                let hash = 0;
+                for (let i = 0; i < lastPeriod.length; i++) {
+                    hash = lastPeriod.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                
+                lockedResult = Math.abs(hash) % 2 === 0 ? "BIG 🟢" : "SMALL 🔴";
+                
+                predBox.innerText = lockedResult;
+                predBox.style.color = lockedResult.includes("BIG") ? "#00ff00" : "#ff3333";
+                document.getElementById('status-text').innerText = "LOCKED (STABLE)";
+            }, 600);
         }
     </script>
 </body>
