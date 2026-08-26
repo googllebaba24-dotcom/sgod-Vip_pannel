@@ -21,6 +21,7 @@ class FloatingService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var container: LinearLayout
     private lateinit var params: WindowManager.LayoutParams
+    private lateinit var webView: WebView
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -44,11 +45,12 @@ class FloatingService : Service() {
         }
         container.addView(dragBar)
 
-        val webView = WebView(this).apply {
+        webView = WebView(this).apply {
             setBackgroundColor(Color.TRANSPARENT)
             settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
             addJavascriptInterface(WebAppInterface(), "Android")
-            layoutParams = LinearLayout.LayoutParams(600, 800)
+            layoutParams = LinearLayout.LayoutParams(600, 850)
             loadUrl("file:///android_asset/index.html")
         }
         container.addView(webView)
@@ -59,6 +61,7 @@ class FloatingService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        // Shuru mein FLAG_NOT_FOCUSABLE rakhenge taaki drag aur game touch chale
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -100,17 +103,28 @@ class FloatingService : Service() {
         windowManager.addView(container, params)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::container.isInitialized) {
-            windowManager.removeView(container)
-        }
-    }
-
+    // Jaise hi HTML se JavaScript call aayegi ki keyboard chahiye, window ko focusable bana denge
     inner class WebAppInterface {
         @JavascriptInterface
         fun closePanel() {
             stopSelf()
+        }
+
+        @JavascriptInterface
+        fun enableFocus() {
+            try {
+                params.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                windowManager.updateViewLayout(container, params)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::container.isInitialized) {
+            windowManager.removeView(container)
         }
     }
 }
