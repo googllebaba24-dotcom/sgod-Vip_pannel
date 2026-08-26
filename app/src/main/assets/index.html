@@ -40,7 +40,7 @@
     <!-- KEY LOGIN SCREEN -->
     <div id="auth-screen" class="box">
         <div style="margin-bottom: 8px; font-size: 12px; color: #fff;">ENTER ACTIVATION KEY</div>
-        <input type="text" id="key-input" placeholder="SGOD-XXXX">
+        <input type="text" id="key-input" placeholder="SGOD-2026" onfocus="Android.enableFocus()">
         <button onclick="verifyKey()">LOGIN PANEL</button>
         <div id="error-msg" style="color: red; font-size: 11px; margin-top: 5px;"></div>
     </div>
@@ -135,18 +135,16 @@
                     hash = lastPeriod.charCodeAt(i) + ((hash << 5) - hash);
                 }
                 
-                // Stable Big/Small & Number (0-9) calculation based on period hash
                 let absHash = Math.abs(hash);
                 let isBig = absHash % 2 === 0;
                 
                 lockedResult = isBig ? "BIG 🟢" : "SMALL 🔴";
                 
-                // Agar BIG hai toh 5,6,7,8,9 mein se ek aayega, SMALL hai toh 0,1,2,3,4 mein se
                 let numHash = Math.floor(absHash / 10);
                 if (isBig) {
-                    lockedNumber = 5 + (numHash % 5); // Returns 5, 6, 7, 8, or 9
+                    lockedNumber = 5 + (numHash % 5); // 5 to 9
                 } else {
-                    lockedNumber = numHash % 5;       // Returns 0, 1, 2, 3, or 4
+                    lockedNumber = numHash % 5;       // 0 to 4
                 }
                 
                 predBox.innerText = lockedResult;
