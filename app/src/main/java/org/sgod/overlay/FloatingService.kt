@@ -1,5 +1,6 @@
 package org.sgod.overlay
 
+import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Intent
 import android.graphics.Color
@@ -10,47 +11,48 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
 import android.widget.LinearLayout
 import android.widget.TextView
 
 class FloatingService : Service() {
 
     private lateinit var windowManager: WindowManager
-    private lateinit var floatingView: LinearLayout
+    private lateinit var container: LinearLayout
     private lateinit var params: WindowManager.LayoutParams
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate() {
         super.onCreate()
-
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-        // Floating Panel ka basic design (bina XML ke)
-        floatingView = LinearLayout(this).apply {
+        container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#99000000")) // Dark transparent background
-            setPadding(20, 20, 20, 20)
+            setBackgroundColor(Color.TRANSPARENT)
         }
 
-        val title = TextView(this).apply {
-            text = "🔥 SGOD VIP Panel"
+        val dragBar = TextView(this).apply {
+            text = "✥ DRAG TO MOVE ✥"
             setTextColor(Color.WHITE)
-            textSize = 16f
-            setPadding(0, 0, 0, 10)
+            setBackgroundColor(Color.parseColor("#222222"))
+            gravity = Gravity.CENTER
+            setPadding(10, 15, 10, 15)
+            textSize = 12f
         }
-        floatingView.addView(title)
+        container.addView(dragBar)
 
-        val closeButton = Button(this).apply {
-            text = "Close Panel"
-            setBackgroundColor(Color.RED)
-            setTextColor(Color.WHITE)
-            setOnClickListener { stopSelf() } // Button dabane par panel band
+        val webView = WebView(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            settings.javaScriptEnabled = true
+            addJavascriptInterface(WebAppInterface(), "Android")
+            layoutParams = LinearLayout.LayoutParams(600, 800)
+            loadUrl("file:///android_asset/index.html")
         }
-        floatingView.addView(closeButton)
+        container.addView(webView)
 
-        // Screen par kahan aur kaise dikhega
         val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -69,8 +71,7 @@ class FloatingService : Service() {
             y = 200
         }
 
-        // Panel ko touch karke move (drag) karne ka code
-        floatingView.setOnTouchListener(object : View.OnTouchListener {
+        dragBar.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
@@ -88,7 +89,7 @@ class FloatingService : Service() {
                     MotionEvent.ACTION_MOVE -> {
                         params.x = initialX + (event.rawX - initialTouchX).toInt()
                         params.y = initialY + (event.rawY - initialTouchY).toInt()
-                        windowManager.updateViewLayout(floatingView, params)
+                        windowManager.updateViewLayout(container, params)
                         return true
                     }
                 }
@@ -96,13 +97,20 @@ class FloatingService : Service() {
             }
         })
 
-        windowManager.addView(floatingView, params)
+        windowManager.addView(container, params)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::floatingView.isInitialized) {
-            windowManager.removeView(floatingView)
+        if (::container.isInitialized) {
+            windowManager.removeView(container)
+        }
+    }
+
+    inner class WebAppInterface {
+        @JavascriptInterface
+        fun closePanel() {
+            stopSelf()
         }
     }
 }
