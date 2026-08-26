@@ -10,15 +10,19 @@
             padding: 12px; 
             margin: 0; 
             border: 2px solid #00ff00;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            border-radius: 12px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
         }
         .title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #fff; text-shadow: 0 0 5px #00ff00; }
         .info-box { background: #1a1a1a; border: 1px solid #333; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; }
         .box { border: 1px dashed #00ff00; padding: 10px; text-align: center; margin-bottom: 8px; background: rgba(0,255,0,0.03); }
-        .result { font-size: 26px; font-weight: bold; color: yellow; margin-top: 5px; text-shadow: 0 0 8px yellow; }
+        .result { font-size: 22px; font-weight: bold; color: yellow; margin-top: 5px; text-shadow: 0 0 8px yellow; }
+        .number-result { font-size: 26px; font-weight: bold; color: cyan; margin-top: 3px; text-shadow: 0 0 8px cyan; }
         .timer { font-size: 14px; color: #ff5555; font-weight: bold; }
+        input { 
+            width: 100%; padding: 8px; background: #000; border: 1px solid #00ff00; 
+            color: #00ff00; font-family: monospace; margin-bottom: 8px; box-sizing: border-box; text-align: center;
+        }
         button { 
             background: #00ff00; color: #000; border: none; padding: 10px; 
             width: 100%; font-weight: bold; font-size: 14px; 
@@ -27,57 +31,83 @@
         }
         button:active { background: #00cc00; }
         .close-btn { background: #cc0000; color: white; box-shadow: 0 0 5px red; }
+        #panel-content { display: none; }
     </style>
 </head>
 <body>
     <div class="title">🔥 SGOD VIP PREDICTOR 🔥</div>
-    
-    <div class="info-box">
-        <span>Period: <b id="period-num" style="color: cyan;">Updating...</b></span>
-        <span>Timer: <b class="timer" id="timer">00:00</b></span>
+
+    <!-- KEY LOGIN SCREEN -->
+    <div id="auth-screen" class="box">
+        <div style="margin-bottom: 8px; font-size: 12px; color: #fff;">ENTER ACTIVATION KEY</div>
+        <input type="text" id="key-input" placeholder="SGOD-XXXX">
+        <button onclick="verifyKey()">LOGIN PANEL</button>
+        <div id="error-msg" style="color: red; font-size: 11px; margin-top: 5px;"></div>
     </div>
 
-    <div class="box">
-        <div style="font-size: 10px; color: #aaa;">STATUS: <span style="color: #00ff00;" id="status-text">READY</span></div>
-        <div class="result" id="prediction">CLICK GET</div>
+    <!-- MAIN PREDICTOR PANEL -->
+    <div id="panel-content">
+        <div class="info-box">
+            <span>Period: <b id="period-num" style="color: cyan;">Loading...</b></span>
+            <span>Timer: <b class="timer" id="timer">00:00</b></span>
+        </div>
+
+        <div class="box">
+            <div style="font-size: 10px; color: #aaa;">PREDICTION RESULT</div>
+            <div class="result" id="prediction">WAITING...</div>
+            <div style="font-size: 10px; color: #aaa; margin-top: 6px;">LUCKY NUMBER (0-9)</div>
+            <div class="number-result" id="lucky-number">-</div>
+        </div>
+        
+        <button onclick="getPrediction()">GET PREDICTION</button>
     </div>
     
-    <button onclick="getPrediction()">GET PREDICTION</button>
     <button class="close-btn" onclick="Android.closePanel()">CLOSE PANEL</button>
 
     <script>
+        const VALID_KEY = "SGOD2026"; 
+
+        function verifyKey() {
+            const userKey = document.getElementById('key-input').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+
+            if (userKey === VALID_KEY) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('panel-content').style.display = 'block';
+            } else {
+                errorMsg.innerText = "❌ Invalid Key!";
+            }
+        }
+
         let lastPeriod = "";
         let lockedResult = "";
+        let lockedNumber = "";
 
         function updateSystem() {
             const now = new Date();
             const year = now.getUTCFullYear();
             const month = String(now.getUTCMonth() + 1).padStart(2, '0');
             const day = String(now.getUTCDate()).padStart(2, '0');
-            
             const hours = now.getUTCHours();
             const minutes = now.getUTCMinutes();
             const seconds = now.getUTCSeconds();
             
-            // Standard time-based unique period generator format (YYYYMMDD5min/1min style)
             const totalMins = hours * 60 + minutes;
             const periodId = `${year}${month}${day}1000${10001 + totalMins}`;
             
-            // Screen par poora ya last 5 digits show karein taaki live lage
             document.getElementById("period-num").innerText = periodId.slice(-5);
 
-            // 60-second countdown timer
             let secLeft = 59 - (seconds % 60);
             let secStr = secLeft < 10 ? "0" + secLeft : secLeft;
             document.getElementById("timer").innerText = "00:" + secStr;
 
-            // Agar period badal gaya, toh purana lock hata do taaki naye period ki nayi prediction aa sake
             if (periodId !== lastPeriod) {
                 lastPeriod = periodId;
-                lockedResult = ""; // Reset lock on new period
+                lockedResult = "";
+                lockedNumber = "";
                 document.getElementById('prediction').innerText = "WAITING...";
                 document.getElementById('prediction').style.color = "yellow";
-                document.getElementById('status-text').innerText = "NEW PERIOD READY";
+                document.getElementById('lucky-number').innerText = "-";
             }
         }
 
@@ -86,31 +116,42 @@
 
         function getPrediction() {
             const predBox = document.getElementById('prediction');
+            const numBox = document.getElementById('lucky-number');
             
-            // Agar is period ki prediction pehle se locked hai, toh wohi dikhayega, change nahi hone dega
             if (lockedResult !== "") {
                 predBox.innerText = lockedResult;
                 predBox.style.color = lockedResult.includes("BIG") ? "#00ff00" : "#ff3333";
-                document.getElementById('status-text').innerText = "LOCKED (STABLE)";
+                numBox.innerText = lockedNumber;
                 return;
             }
 
             predBox.innerText = "ANALYZING...";
             predBox.style.color = "white";
-            document.getElementById('status-text').innerText = "PROCESSING...";
+            numBox.innerText = "...";
 
             setTimeout(() => {
-                // Algorithm jo period ke mutabiq ekdam stable result banayega
                 let hash = 0;
                 for (let i = 0; i < lastPeriod.length; i++) {
                     hash = lastPeriod.charCodeAt(i) + ((hash << 5) - hash);
                 }
                 
-                lockedResult = Math.abs(hash) % 2 === 0 ? "BIG 🟢" : "SMALL 🔴";
+                // Stable Big/Small & Number (0-9) calculation based on period hash
+                let absHash = Math.abs(hash);
+                let isBig = absHash % 2 === 0;
+                
+                lockedResult = isBig ? "BIG 🟢" : "SMALL 🔴";
+                
+                // Agar BIG hai toh 5,6,7,8,9 mein se ek aayega, SMALL hai toh 0,1,2,3,4 mein se
+                let numHash = Math.floor(absHash / 10);
+                if (isBig) {
+                    lockedNumber = 5 + (numHash % 5); // Returns 5, 6, 7, 8, or 9
+                } else {
+                    lockedNumber = numHash % 5;       // Returns 0, 1, 2, 3, or 4
+                }
                 
                 predBox.innerText = lockedResult;
-                predBox.style.color = lockedResult.includes("BIG") ? "#00ff00" : "#ff3333";
-                document.getElementById('status-text').innerText = "LOCKED (STABLE)";
+                predBox.style.color = isBig ? "#00ff00" : "#ff3333";
+                numBox.innerText = lockedNumber;
             }, 600);
         }
     </script>
