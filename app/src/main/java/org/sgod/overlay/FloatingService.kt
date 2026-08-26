@@ -61,7 +61,7 @@ class FloatingService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // Shuru mein FLAG_NOT_FOCUSABLE rakhenge taaki drag aur game touch chale
+        // Shuru mein FLAG_NOT_FOCUSABLE rakhenge taaki drag smooth chale
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -103,7 +103,7 @@ class FloatingService : Service() {
         windowManager.addView(container, params)
     }
 
-    // Jaise hi HTML se JavaScript call aayegi ki keyboard chahiye, window ko focusable bana denge
+    // Yeh function JS se call hoga aur window ko fully focusable bana kar keyboard khol dega
     inner class WebAppInterface {
         @JavascriptInterface
         fun closePanel() {
@@ -113,7 +113,7 @@ class FloatingService : Service() {
         @JavascriptInterface
         fun enableFocus() {
             try {
-                params.flags = WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 windowManager.updateViewLayout(container, params)
             } catch (e: Exception) {
                 e.printStackTrace()
