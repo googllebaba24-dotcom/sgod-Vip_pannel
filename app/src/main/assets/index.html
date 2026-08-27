@@ -16,8 +16,8 @@
         .title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; color: #fff; text-shadow: 0 0 5px #00ff00; }
         .info-box { background: #1a1a1a; border: 1px solid #333; padding: 6px 10px; font-size: 12px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; }
         .box { border: 1px dashed #00ff00; padding: 10px; text-align: center; margin-bottom: 8px; background: rgba(0,255,0,0.03); }
-        .result { font-size: 22px; font-weight: bold; color: yellow; margin-top: 5px; text-shadow: 0 0 8px yellow; }
-        .number-result { font-size: 26px; font-weight: bold; color: cyan; margin-top: 3px; text-shadow: 0 0 8px cyan; }
+        .result { font-size: 24px; font-weight: bold; color: yellow; margin-top: 5px; text-shadow: 0 0 8px yellow; }
+        .number-result { font-size: 28px; font-weight: bold; color: cyan; margin-top: 4px; text-shadow: 0 0 8px cyan; }
         .timer { font-size: 14px; color: #ff5555; font-weight: bold; }
         input { 
             width: 100%; padding: 8px; background: #000; border: 1px solid #00ff00; 
@@ -40,7 +40,7 @@
     <!-- KEY LOGIN SCREEN -->
     <div id="auth-screen" class="box">
         <div style="margin-bottom: 8px; font-size: 12px; color: #fff;">ENTER ACTIVATION KEY</div>
-        <input type="text" id="key-input" placeholder="SGOD-2026" onfocus="Android.enableFocus()">
+        <input type="text" id="key-input" placeholder="SGOD2026" onfocus="Android.enableFocus()">
         <button onclick="verifyKey()">LOGIN PANEL</button>
         <div id="error-msg" style="color: red; font-size: 11px; margin-top: 5px;"></div>
     </div>
@@ -54,12 +54,12 @@
 
         <div class="box">
             <div style="font-size: 10px; color: #aaa;">PREDICTION RESULT</div>
-            <div class="result" id="prediction">WAITING...</div>
+            <div class="result" id="prediction">BIG 🟢</div>
             <div style="font-size: 10px; color: #aaa; margin-top: 6px;">LUCKY NUMBER (0-9)</div>
-            <div class="number-result" id="lucky-number">-</div>
+            <div class="number-result" id="lucky-number">7</div>
         </div>
         
-        <button onclick="getPrediction()">GET PREDICTION</button>
+        <button onclick="getPrediction()">REFRESH PREDICTION</button>
     </div>
     
     <button class="close-btn" onclick="Android.closePanel()">CLOSE PANEL</button>
@@ -74,83 +74,68 @@
             if (userKey === VALID_KEY) {
                 document.getElementById('auth-screen').style.display = 'none';
                 document.getElementById('panel-content').style.display = 'block';
+                startPredictorEngine(); // Login hote hi engine chalu ho jayega
             } else {
-                errorMsg.innerText = "❌ Invalid Key!";
+                errorMsg.innerText = "❌ Invalid Key! Use SGOD2026";
             }
         }
 
         let lastPeriod = "";
-        let lockedResult = "";
-        let lockedNumber = "";
 
-        function updateSystem() {
-            const now = new Date();
-            const year = now.getUTCFullYear();
-            const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(now.getUTCDate()).padStart(2, '0');
-            const hours = now.getUTCHours();
-            const minutes = now.getUTCMinutes();
-            const seconds = now.getUTCSeconds();
-            
-            const totalMins = hours * 60 + minutes;
-            const periodId = `${year}${month}${day}1000${10001 + totalMins}`;
-            
-            document.getElementById("period-num").innerText = periodId.slice(-5);
+        function startPredictorEngine() {
+            function updateSystem() {
+                const now = new Date();
+                const year = now.getUTCFullYear();
+                const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(now.getUTCDate()).padStart(2, '0');
+                const hours = now.getUTCHours();
+                const minutes = now.getUTCMinutes();
+                const seconds = now.getUTCSeconds();
+                
+                const totalMins = hours * 60 + minutes;
+                const periodId = `${year}${month}${day}1000${10001 + totalMins}`;
+                
+                document.getElementById("period-num").innerText = periodId.slice(-5);
 
-            let secLeft = 59 - (seconds % 60);
-            let secStr = secLeft < 10 ? "0" + secLeft : secLeft;
-            document.getElementById("timer").innerText = "00:" + secStr;
+                let secLeft = 59 - (seconds % 60);
+                let secStr = secLeft < 10 ? "0" + secLeft : secLeft;
+                document.getElementById("timer").innerText = "00:" + secStr;
 
-            if (periodId !== lastPeriod) {
-                lastPeriod = periodId;
-                lockedResult = "";
-                lockedNumber = "";
-                document.getElementById('prediction').innerText = "WAITING...";
-                document.getElementById('prediction').style.color = "yellow";
-                document.getElementById('lucky-number').innerText = "-";
+                // Automatically generate or refresh stable prediction per period
+                if (periodId !== lastPeriod) {
+                    lastPeriod = periodId;
+                    calculatePrediction(periodId);
+                }
             }
+
+            setInterval(updateSystem, 1000);
+            updateSystem();
         }
 
-        setInterval(updateSystem, 1000);
-        updateSystem();
-
-        function getPrediction() {
+        function calculatePrediction(period) {
+            let hash = 0;
+            for (let i = 0; i < period.length; i++) {
+                hash = period.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            
+            let absHash = Math.abs(hash);
+            let isBig = absHash % 2 === 0;
+            
+            let resultText = isBig ? "BIG 🟢" : "SMALL 🔴";
+            let numHash = Math.floor(absHash / 10);
+            let luckyNum = isBig ? (5 + (numHash % 5)) : (numHash % 5);
+            
             const predBox = document.getElementById('prediction');
             const numBox = document.getElementById('lucky-number');
             
-            if (lockedResult !== "") {
-                predBox.innerText = lockedResult;
-                predBox.style.color = lockedResult.includes("BIG") ? "#00ff00" : "#ff3333";
-                numBox.innerText = lockedNumber;
-                return;
-            }
+            predBox.innerText = resultText;
+            predBox.style.color = isBig ? "#00ff00" : "#ff3333";
+            numBox.innerText = luckyNum;
+        }
 
-            predBox.innerText = "ANALYZING...";
-            predBox.style.color = "white";
-            numBox.innerText = "...";
-
-            setTimeout(() => {
-                let hash = 0;
-                for (let i = 0; i < lastPeriod.length; i++) {
-                    hash = lastPeriod.charCodeAt(i) + ((hash << 5) - hash);
-                }
-                
-                let absHash = Math.abs(hash);
-                let isBig = absHash % 2 === 0;
-                
-                lockedResult = isBig ? "BIG 🟢" : "SMALL 🔴";
-                
-                let numHash = Math.floor(absHash / 10);
-                if (isBig) {
-                    lockedNumber = 5 + (numHash % 5); // 5 to 9
-                } else {
-                    lockedNumber = numHash % 5;       // 0 to 4
-                }
-                
-                predBox.innerText = lockedResult;
-                predBox.style.color = isBig ? "#00ff00" : "#ff3333";
-                numBox.innerText = lockedNumber;
-            }, 600);
+        function getPrediction() {
+            // Manual refresh button click par bhi current period ka stable output dega
+            calculatePrediction(lastPeriod);
         }
     </script>
 </body>
